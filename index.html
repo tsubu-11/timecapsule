@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>タイムカプセル</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1c1917">
-  <!-- iOS PWA -->
+  <meta name="theme-color" content="#1c1917" id="theme-color-meta">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="タイムカプセル">
@@ -14,31 +13,63 @@
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+    /* ── CSS Variables ── */
     :root {
-      --bg:       #f7f4ef;
-      --card:     #ffffff;
-      --accent:   #b5813a;
-      --accent-d: #9a6d2f;
-      --accent-l: #f5ead8;
-      --text:     #1c1917;
-      --muted:    #9c948c;
-      --border:   #e8e0d4;
-      --lock-bg:  #f8f6f2;
-      --red:      #c0392b;
-      --radius:   16px;
-      --shadow:   0 2px 16px rgba(181,129,58,0.07), 0 1px 3px rgba(0,0,0,0.04);
+      --bg:          #f7f4ef;
+      --card:        #ffffff;
+      --card-alt:    #fdfcfa;
+      --card-locked: #f4f1eb;
+      --accent:      #b5813a;
+      --accent-d:    #9a6d2f;
+      --accent-l:    #f5ead8;
+      --accent-l2:   #fae8be;
+      --text:        #1c1917;
+      --muted:       #9c948c;
+      --border:      #e8e0d4;
+      --lock-bg:     #f8f6f2;
+      --red:         #c0392b;
+      --radius:      16px;
+      --shadow:      0 2px 16px rgba(181,129,58,0.07), 0 1px 3px rgba(0,0,0,0.04);
+      --header-bg:   rgba(247,244,239,0.96);
+      --header-bg2:  rgba(247,244,239,0.88);
+      --seg-bg:      #e8e0d4;
+      --seg-active:  #ffffff;
+      --input-bg:    #ffffff;
+      --bg-gradient: radial-gradient(ellipse 120% 40% at 50% 0%, rgba(213,174,107,0.15) 0%, transparent 65%);
+    }
+    [data-theme="dark"] {
+      --bg:          #141210;
+      --card:        #1e1b17;
+      --card-alt:    #1a1714;
+      --card-locked: #161310;
+      --accent:      #d4a043;
+      --accent-d:    #b5813a;
+      --accent-l:    #2d2218;
+      --accent-l2:   #3a2c18;
+      --text:        #ede8df;
+      --muted:       #6b6259;
+      --border:      #302a22;
+      --lock-bg:     #191510;
+      --red:         #e05c4e;
+      --header-bg:   rgba(20,18,16,0.96);
+      --header-bg2:  rgba(20,18,16,0.88);
+      --seg-bg:      #302a22;
+      --seg-active:  #3a3228;
+      --input-bg:    #1e1b17;
+      --bg-gradient: radial-gradient(ellipse 120% 40% at 50% 0%, rgba(213,174,107,0.05) 0%, transparent 65%);
     }
 
+    /* ── Body ── */
     body {
       background: var(--bg);
-      background-image: radial-gradient(ellipse 120% 40% at 50% 0%, rgba(213,174,107,0.15) 0%, transparent 65%);
+      background-image: var(--bg-gradient);
       font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
       color: var(--text);
       min-height: 100vh;
       display: flex;
       justify-content: center;
+      transition: background-color 0.25s;
     }
-
     #app {
       width: 100%;
       max-width: 430px;
@@ -52,9 +83,10 @@
       position: absolute;
       inset: 0;
       background: var(--bg);
-      background-image: radial-gradient(ellipse 120% 40% at 50% 0%, rgba(213,174,107,0.15) 0%, transparent 65%);
+      background-image: var(--bg-gradient);
       overflow-y: auto;
       transition: transform 0.28s cubic-bezier(.4,0,.2,1), opacity 0.28s;
+      -webkit-overflow-scrolling: touch;
     }
     .screen.hidden   { transform: translateX(100%); opacity: 0; pointer-events: none; }
     .screen.slide-in { transform: translateX(0);    opacity: 1; }
@@ -68,7 +100,7 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      background: linear-gradient(180deg, rgba(247,244,239,0.96) 0%, rgba(247,244,239,0.88) 100%);
+      background: linear-gradient(180deg, var(--header-bg) 0%, var(--header-bg2) 100%);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
     }
@@ -83,7 +115,7 @@
       font-size: 1.5rem;
       font-weight: 700;
       letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #1c1917 30%, #8b5e24 100%);
+      background: linear-gradient(135deg, var(--text) 30%, var(--accent-d) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -98,22 +130,22 @@
       transition: opacity 0.15s, transform 0.15s;
       box-shadow: 0 2px 8px rgba(0,0,0,0.22);
     }
+    [data-theme="dark"] .btn-icon:not(.btn-back) {
+      background: linear-gradient(145deg, var(--accent), var(--accent-d));
+      box-shadow: 0 2px 10px rgba(212,160,67,0.35);
+    }
     .btn-icon:active { opacity: 0.6; transform: scale(0.93); }
     .btn-icon svg { width: 18px; height: 18px; fill: #fff; }
     .btn-back {
       background: var(--card);
       border: 1.5px solid var(--border);
-      color: var(--text);
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
     .btn-back svg { fill: var(--text); }
+    .header-btns { display: flex; gap: 8px; }
 
     /* ── Stats bar ── */
-    .stats {
-      display: flex;
-      gap: 10px;
-      padding: 20px 20px 20px;
-    }
+    .stats { display: flex; gap: 10px; padding: 20px 20px 20px; }
     .stat-chip {
       background: var(--card);
       border-radius: 12px;
@@ -131,7 +163,7 @@
 
     /* ── Card ── */
     .card {
-      background: linear-gradient(180deg, #ffffff 0%, #fdfcfa 100%);
+      background: linear-gradient(180deg, var(--card) 0%, var(--card-alt) 100%);
       border-radius: var(--radius);
       padding: 18px;
       box-shadow: var(--shadow);
@@ -141,9 +173,12 @@
       position: relative;
       overflow: hidden;
     }
+    [data-theme="dark"] .card { background: var(--card); }
     .card:active { transform: scale(0.98); box-shadow: none; }
-    .card.locked { background: linear-gradient(180deg, #f8f6f2 0%, #f4f1eb 100%); }
-
+    .card.locked {
+      background: linear-gradient(180deg, var(--lock-bg) 0%, var(--card-locked) 100%);
+    }
+    [data-theme="dark"] .card.locked { background: var(--lock-bg); }
     .card.unlocked-new {
       border-color: var(--accent);
       box-shadow: 0 0 0 2px var(--accent-l), 0 4px 24px rgba(181,129,58,0.22);
@@ -151,14 +186,9 @@
     }
     @keyframes pulse-gold {
       0%, 100% { box-shadow: 0 0 0 2px var(--accent-l), 0 4px 20px rgba(181,129,58,0.15); }
-      50%       { box-shadow: 0 0 0 3px #f0d898, 0 6px 32px rgba(181,129,58,0.32); }
+      50%       { box-shadow: 0 0 0 3px var(--accent-l2), 0 6px 32px rgba(181,129,58,0.32); }
     }
-
-    .card-top {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
+    .card-top { display: flex; align-items: flex-start; gap: 12px; }
     .card-icon {
       width: 44px; height: 44px;
       border-radius: 12px;
@@ -167,194 +197,121 @@
       font-size: 1.3rem;
     }
     .card-icon.locked-icon { background: linear-gradient(135deg, #ede9e3, #ddd7cd); }
-    .card-icon.new-icon    { background: linear-gradient(135deg, #f5ead8, #fae8be); }
+    .card-icon.new-icon    { background: linear-gradient(135deg, var(--accent-l), var(--accent-l2)); }
     .card-icon.read-icon   { background: linear-gradient(135deg, #edf4ed, #d8ead8); }
-
+    [data-theme="dark"] .card-icon.locked-icon { background: linear-gradient(135deg, #302a22, #252018); }
+    [data-theme="dark"] .card-icon.read-icon   { background: linear-gradient(135deg, #1e2d1e, #182818); }
     .card-body { flex: 1; min-width: 0; }
-    .card-title {
-      font-size: 1rem; font-weight: 600;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin-bottom: 4px;
-    }
-    .card-date { font-size: 0.75rem; color: var(--muted); }
-
+    .card-title { font-size: 1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+    .card-date  { font-size: 0.75rem; color: var(--muted); }
     .card-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 10px;
-      padding: 5px 10px;
-      border-radius: 20px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-top: 10px; padding: 5px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
     }
     .badge-locked { background: #ede9e3; color: #7c6e5c; }
-    .badge-new    { background: linear-gradient(135deg, var(--accent-l), #fae8be); color: var(--accent-d); }
+    .badge-new    { background: linear-gradient(135deg, var(--accent-l), var(--accent-l2)); color: var(--accent-d); }
     .badge-read   { background: #edf4ed; color: #4a7c59; }
+    [data-theme="dark"] .badge-locked { background: #252018; color: var(--muted); }
+    [data-theme="dark"] .badge-read   { background: #1a2b1a; color: #5a9c6a; }
     .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
     .badge-locked .badge-dot { background: #9c8c78; }
     .badge-new    .badge-dot { background: var(--accent); }
     .badge-read   .badge-dot { background: #4a7c59; }
+    [data-theme="dark"] .badge-read .badge-dot { background: #5a9c6a; }
 
     /* ── Empty state ── */
-    .empty {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-    }
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
     .empty-icon { font-size: 3rem; margin-bottom: 16px; }
     .empty h3   { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
     .empty p    { font-size: 0.85rem; line-height: 1.6; }
 
     /* ── Write screen ── */
     .write-body { padding: 0 20px 40px; }
-
     .field-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 8px;
+      font-size: 0.75rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
     }
     .field-group { margin-bottom: 24px; }
-
     input[type="text"], textarea {
-      width: 100%;
-      background: var(--card);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-      font-size: 1rem;
-      font-family: inherit;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      -webkit-appearance: none;
+      width: 100%; background: var(--input-bg); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; font-size: 1rem;
+      font-family: inherit; color: var(--text); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none;
     }
     input[type="text"]:focus, textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(181,129,58,0.12);
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(181,129,58,0.12);
     }
     textarea { min-height: 200px; resize: none; line-height: 1.6; }
-
-    /* Unlock date presets */
-    .preset-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 10px;
-    }
+    .preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
     .preset-btn {
-      padding: 12px 6px;
-      background: var(--card);
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      font-size: 0.82rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-      color: var(--text);
-      text-align: center;
+      padding: 12px 6px; background: var(--card); border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+      transition: all 0.15s; color: var(--text); text-align: center;
     }
     .preset-btn.active {
       background: linear-gradient(135deg, #d4a043, #b5813a);
-      border-color: var(--accent);
-      color: #fff;
+      border-color: var(--accent); color: #fff;
       box-shadow: 0 2px 10px rgba(181,129,58,0.32);
     }
     .preset-btn:active { opacity: 0.7; }
-
     input[type="date"] {
-      width: 100%;
-      background: var(--card);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-      font-size: 1rem;
-      font-family: inherit;
-      color: var(--text);
-      outline: none;
-      -webkit-appearance: none;
-      margin-top: 8px;
+      width: 100%; background: var(--input-bg); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; font-size: 1rem;
+      font-family: inherit; color: var(--text); outline: none;
+      -webkit-appearance: none; margin-top: 8px;
+      color-scheme: light dark;
     }
     input[type="date"]:focus { border-color: var(--accent); }
     .date-custom-wrap { display: none; }
     .date-custom-wrap.visible { display: block; }
-
-    /* Seal button */
     .btn-seal {
-      width: 100%;
-      padding: 18px;
+      width: 100%; padding: 18px;
       background: linear-gradient(150deg, #2d2218 0%, #1c1917 60%, #251c0e 100%);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      transition: opacity 0.15s, transform 0.15s;
-      margin-top: 8px;
+      color: #fff; border: none; border-radius: var(--radius);
+      font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s; margin-top: 8px;
       box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+    }
+    [data-theme="dark"] .btn-seal {
+      background: linear-gradient(150deg, #3d3224 0%, #2a2218 60%, #352c16 100%);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
     }
     .btn-seal:active { opacity: 0.75; transform: scale(0.99); }
     .btn-seal:disabled { opacity: 0.4; }
 
-    /* Seal animation overlay */
+    /* ── Seal animation overlay ── */
     #seal-overlay {
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background: radial-gradient(ellipse at center, #fdf8f0 0%, var(--bg) 70%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.35s;
-      max-width: 430px;
-      margin: 0 auto;
-      overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.35s;
+      max-width: 430px; margin: 0 auto; overflow: hidden;
+    }
+    [data-theme="dark"] #seal-overlay {
+      background: radial-gradient(ellipse at center, #2d2218 0%, var(--bg) 70%);
     }
     #seal-overlay.show { opacity: 1; pointer-events: all; }
     #seal-overlay .seal-icon {
-      font-size: 4.5rem;
-      margin-bottom: 20px;
+      font-size: 4.5rem; margin-bottom: 20px;
       animation: sealBounce 0.55s cubic-bezier(.34,1.56,.64,1);
-      position: relative;
-      z-index: 1;
+      position: relative; z-index: 1;
     }
     #seal-overlay .seal-text {
-      font-size: 1.2rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #1c1917 30%, #8b5e24 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-size: 1.2rem; font-weight: 700;
+      background: linear-gradient(135deg, var(--text) 30%, var(--accent-d) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
       position: relative; z-index: 1;
     }
-    #seal-overlay .seal-sub {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-top: 8px;
-      position: relative; z-index: 1;
-    }
+    #seal-overlay .seal-sub { font-size: 0.85rem; color: var(--muted); margin-top: 8px; position: relative; z-index: 1; }
     @keyframes sealBounce {
       0%   { transform: scale(0.3) rotate(-15deg); opacity: 0; }
       70%  { transform: scale(1.18) rotate(6deg); }
       100% { transform: scale(1) rotate(0deg); opacity: 1; }
     }
-
-    /* Sparkles */
     .sparkle {
-      position: absolute;
-      pointer-events: none;
-      font-size: 1.4rem;
-      animation: sparkleFly 1.1s ease-out forwards;
-      z-index: 0;
+      position: absolute; pointer-events: none; font-size: 1.4rem;
+      animation: sparkleFly 1.1s ease-out forwards; z-index: 0;
     }
     @keyframes sparkleFly {
       0%   { transform: translate(0, 0) scale(0.2) rotate(0deg); opacity: 1; }
@@ -363,71 +320,47 @@
     }
 
     /* ── Read screen ── */
-    .read-meta {
-      padding: 0 20px 24px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+    .read-meta { padding: 0 20px 24px; display: flex; gap: 10px; flex-wrap: wrap; }
     .meta-chip {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 6px 12px;
-      font-size: 0.75rem;
-      color: var(--muted);
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+      padding: 6px 12px; font-size: 0.75rem; color: var(--muted);
       box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     }
     .meta-chip strong { color: var(--text); }
-
-    .read-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      padding: 0 20px 20px;
-      line-height: 1.3;
-    }
+    .read-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; padding: 0 20px 20px; line-height: 1.3; }
     .read-divider {
       height: 1px;
       background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
       margin: 0 20px 24px;
     }
-    .read-body {
-      padding: 0 20px 80px;
-      font-size: 1rem;
-      line-height: 1.8;
-      color: var(--text);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    /* New-open banner */
+    .read-body { padding: 0 20px 80px; font-size: 1rem; line-height: 1.8; color: var(--text); white-space: pre-wrap; word-break: break-word; }
     .new-open-banner {
       margin: 0 20px 20px;
-      background: linear-gradient(135deg, var(--accent-l), #fef2d0);
-      border: 1px solid #d4a043;
-      border-radius: 12px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      background: linear-gradient(135deg, var(--accent-l), var(--accent-l2));
+      border: 1px solid var(--accent-d);
+      border-radius: 12px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 10px;
       box-shadow: 0 2px 14px rgba(181,129,58,0.16);
     }
     .new-open-banner .icon { font-size: 1.4rem; }
     .new-open-banner .txt  { font-size: 0.82rem; line-height: 1.5; color: #7a5a1e; }
+    [data-theme="dark"] .new-open-banner .txt { color: var(--accent); }
     .new-open-banner .txt strong { font-weight: 700; display: block; }
+    .btn-delete {
+      margin: 16px 20px 0; width: calc(100% - 40px); padding: 14px;
+      background: none; border: 1.5px solid #e8c0bb; border-radius: 12px;
+      color: var(--red); font-size: 0.9rem; font-weight: 500; cursor: pointer;
+    }
+    [data-theme="dark"] .btn-delete { border-color: #4a2018; }
+    .btn-delete:active { background: rgba(192,57,43,0.06); }
 
     /* ── Notification banner ── */
     #notif-banner {
       margin: 0 20px 16px;
       background: linear-gradient(135deg, #1c1917, #2d2218);
-      border-radius: 14px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.18);
-      cursor: pointer;
+      border-radius: 14px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.18); cursor: pointer;
       transition: opacity 0.2s;
     }
     #notif-banner:active { opacity: 0.75; }
@@ -436,25 +369,181 @@
     #notif-banner .nb-text { flex: 1; }
     #notif-banner .nb-text strong { display: block; font-size: 0.88rem; color: #fff; font-weight: 700; margin-bottom: 2px; }
     #notif-banner .nb-text span  { font-size: 0.75rem; color: rgba(255,255,255,0.6); }
-    #notif-banner .nb-close {
-      font-size: 1rem; color: rgba(255,255,255,0.4);
-      background: none; border: none; cursor: pointer; padding: 4px;
+    #notif-banner .nb-close { font-size: 1rem; color: rgba(255,255,255,0.4); background: none; border: none; cursor: pointer; padding: 4px; }
+
+    /* ── Settings screen ── */
+    .settings-body { padding: 0 0 80px; }
+    .settings-section { margin-bottom: 0; }
+    .settings-section-label {
+      font-size: 0.72rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 24px 20px 8px;
+    }
+    .settings-group {
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row {
+      display: flex; align-items: center;
+      padding: 14px 20px; border-bottom: 1px solid var(--border); gap: 12px;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row.tappable { cursor: pointer; transition: background 0.12s; }
+    .settings-row.tappable:active { background: var(--lock-bg); }
+    .settings-row-icon { font-size: 1.15rem; width: 26px; text-align: center; flex-shrink: 0; }
+    .settings-row-body { flex: 1; }
+    .settings-row-label { font-size: 0.95rem; color: var(--text); }
+    .settings-row-sub   { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .settings-row-val   { font-size: 0.85rem; color: var(--muted); }
+    .settings-chevron   { color: var(--muted); font-size: 1rem; margin-left: 4px; }
+
+    /* Segmented control */
+    .seg-ctrl { display: flex; background: var(--seg-bg); border-radius: 9px; padding: 2px; gap: 2px; }
+    .seg-btn {
+      flex: 1; padding: 6px 4px; background: none; border: none;
+      border-radius: 7px; font-size: 0.78rem; font-weight: 500;
+      color: var(--muted); cursor: pointer; transition: all 0.18s;
+      font-family: inherit;
+    }
+    .seg-btn.active {
+      background: var(--seg-active); color: var(--text); font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.12);
     }
 
-    /* Delete btn */
-    .btn-delete {
-      margin: 16px 20px 0;
-      width: calc(100% - 40px);
-      padding: 14px;
-      background: none;
-      border: 1.5px solid #e8c0bb;
-      border-radius: 12px;
-      color: var(--red);
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
+    /* Toggle switch */
+    .sw { position: relative; display: inline-block; width: 51px; height: 31px; flex-shrink: 0; }
+    .sw input { opacity: 0; width: 0; height: 0; }
+    .sw-track { position: absolute; inset: 0; background: var(--border); border-radius: 31px; transition: background 0.25s; }
+    .sw input:checked + .sw-track { background: #34c759; }
+    .sw input:disabled + .sw-track { opacity: 0.5; }
+    .sw-thumb {
+      position: absolute; width: 27px; height: 27px; top: 2px; left: 2px;
+      background: white; border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2); transition: transform 0.25s;
     }
-    .btn-delete:active { background: #fdf0ee; }
+    .sw input:checked + .sw-track .sw-thumb { transform: translateX(20px); }
+
+    /* ── Privacy screen ── */
+    .privacy-body { padding: 20px 20px 80px; }
+    .privacy-body h2 { font-size: 1rem; font-weight: 700; color: var(--text); margin: 20px 0 8px; }
+    .privacy-body h2:first-child { margin-top: 0; }
+    .privacy-body p  { font-size: 0.88rem; line-height: 1.75; color: var(--muted); }
+    .privacy-body ul { padding-left: 1.2em; }
+    .privacy-body li { font-size: 0.88rem; line-height: 1.75; color: var(--muted); margin-bottom: 4px; }
+    .privacy-updated { font-size: 0.75rem; color: var(--muted); margin-bottom: 20px; }
+
+    /* ── Lock overlay ── */
+    #lock-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 40px 20px 60px;
+      max-width: 430px; left: 50%; transform: translateX(-50%);
+    }
+    #lock-overlay.hidden { display: none; }
+    .lock-app-icon { font-size: 3rem; margin-bottom: 10px; }
+    .lock-app-name { font-size: 1.2rem; font-weight: 700; color: var(--text); margin-bottom: 48px; }
+    .lock-error-msg { font-size: 0.82rem; color: var(--red); margin-bottom: 16px; min-height: 1.2em; }
+    .pin-dots { display: flex; gap: 18px; margin-bottom: 40px; }
+    .pin-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid var(--muted); transition: all 0.15s;
+    }
+    .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+    .pin-dot.error  { background: var(--red); border-color: var(--red); }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60% { transform: translateX(-5px); }
+      40%,80% { transform: translateX(5px); }
+    }
+    .pin-dots.shake { animation: shake 0.35s; }
+    .pin-pad {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; width: 100%; max-width: 280px;
+    }
+    .pin-key {
+      height: 68px; background: var(--card); border: 1.5px solid var(--border);
+      border-radius: 16px; font-size: 1.5rem; font-weight: 400; color: var(--text);
+      cursor: pointer; transition: background 0.1s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center;
+      font-family: inherit;
+    }
+    .pin-key:active { background: var(--accent-l); transform: scale(0.93); }
+    .pin-key.del-key { font-size: 1rem; }
+    .pin-key.empty-key { background: none; border: none; cursor: default; pointer-events: none; }
+
+    /* ── PIN modal ── */
+    #pin-modal {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,0.55);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    #pin-modal.hidden { display: none; }
+    .pin-modal-sheet {
+      background: var(--bg); border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 430px; padding: 28px 20px 40px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .pin-modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .pin-modal-sub   { font-size: 0.82rem; color: var(--muted); margin-bottom: 28px; }
+    #pin-modal .pin-dots { margin-bottom: 28px; }
+    .pin-modal-cancel {
+      margin-top: 16px; font-size: 0.9rem; color: var(--muted);
+      background: none; border: none; cursor: pointer; padding: 8px 24px;
+      font-family: inherit;
+    }
+
+    /* ── Onboarding ── */
+    #onboarding {
+      position: fixed; inset: 0; z-index: 150;
+      background: var(--bg);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 60px 28px 48px;
+      max-width: 430px; left: 50%; transform: translateX(-50%);
+    }
+    #onboarding.hidden { display: none; }
+    .ob-slides { flex: 1; width: 100%; position: relative; overflow: hidden; }
+    .ob-slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+      transition: transform 0.35s cubic-bezier(.4,0,.2,1), opacity 0.35s;
+    }
+    .ob-slide.ob-left  { transform: translateX(-100%); opacity: 0; }
+    .ob-slide.ob-right { transform: translateX(100%);  opacity: 0; }
+    .ob-emoji  { font-size: 5rem; margin-bottom: 28px; }
+    .ob-title  { font-size: 1.4rem; font-weight: 700; color: var(--text); margin-bottom: 12px; letter-spacing: -0.02em; }
+    .ob-desc   { font-size: 0.95rem; color: var(--muted); line-height: 1.7; max-width: 280px; }
+    .ob-footer { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .ob-dots   { display: flex; gap: 6px; }
+    .ob-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--border); transition: all 0.25s;
+    }
+    .ob-dot.active { background: var(--accent); width: 20px; border-radius: 4px; }
+    .ob-btn {
+      width: 100%; padding: 16px;
+      background: linear-gradient(150deg, #2d2218 0%, #1c1917 60%, #251c0e 100%);
+      color: #fff; border: none; border-radius: var(--radius);
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      transition: opacity 0.15s; font-family: inherit;
+    }
+    [data-theme="dark"] .ob-btn {
+      background: linear-gradient(150deg, #3d3224 0%, #2a2218 60%, #352c16 100%);
+    }
+    .ob-btn:active { opacity: 0.75; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(28,25,23,0.9); color: #fff;
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 0.85rem; font-weight: 500; white-space: nowrap; z-index: 500;
+      transition: opacity 0.3s, transform 0.3s;
+      opacity: 0; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
   </style>
 </head>
 <body>
@@ -467,9 +556,14 @@
         <div class="header-title">タイムカプセル</div>
         <div class="header-sub">過去の自分からの手紙</div>
       </div>
-      <button class="btn-icon" id="btn-new" aria-label="新規作成">
-        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-      </button>
+      <div class="header-btns">
+        <button class="btn-icon btn-back" id="btn-settings-open" aria-label="設定">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        </button>
+        <button class="btn-icon" id="btn-new" aria-label="新規作成">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+      </div>
     </div>
     <div id="notif-banner" class="hidden">
       <div class="nb-icon">🔔</div>
@@ -540,18 +634,251 @@
     <button class="btn-delete" id="btn-delete">このカプセルを削除</button>
   </div>
 
+  <!-- ── Settings screen ── -->
+  <div class="screen hidden" id="screen-settings">
+    <div class="header">
+      <button class="btn-icon btn-back" id="btn-back-settings" aria-label="戻る">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </button>
+      <div style="flex:1; text-align:center;">
+        <div class="header-title" style="font-size:1.1rem;">設定</div>
+      </div>
+      <div style="width:40px;"></div>
+    </div>
+    <div class="settings-body">
+
+      <div class="settings-section">
+        <div class="settings-section-label">外観</div>
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-row-icon">🌤</div>
+            <div class="settings-row-body">
+              <div class="settings-row-label">テーマ</div>
+            </div>
+            <div class="seg-ctrl" id="theme-seg">
+              <button class="seg-btn" data-theme="light">ライト</button>
+              <button class="seg-btn" data-theme="system">自動</button>
+              <button class="seg-btn" data-theme="dark">ダーク</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-icon">✏️</div>
+            <div class="settings-row-body">
+              <div class="settings-row-label">文字サイズ</div>
+            </div>
+            <div class="seg-ctrl" id="fontsize-seg">
+              <button class="seg-btn" data-size="small">小</button>
+              <button class="seg-btn" data-size="medium">中</button>
+              <button class="seg-btn" data-size="large">大</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-label">データ</div>
+        <div class="settings-group">
+          <div class="settings-row tappable" id="row-export">
+            <div class="settings-row-icon">📤</div>
+            <div class="settings-row-body">
+              <div class="settings-row-label">バックアップを書き出す</div>
+              <div class="settings-row-sub">JSONファイルとして保存</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+          <div class="settings-row tappable" id="row-import">
+            <div class="settings-row-icon">📥</div>
+            <div class="settings-row-body">
+              <div class="settings-row-label">バックアップを読み込む</div>
+              <div class="settings-row-sub">別のデバイスや別のブラウザから移行</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-label">セキュリティ</div>
+        <div class="settings-group">
+          <div class="settings-row tappable" id="row-pin">
+            <div class="settings-row-icon">🔐</div>
+            <div class="settings-row-body">
+              <div class="settings-row-label">アプリロック（PIN）</div>
+              <div class="settings-row-sub" id="pin-status-sub">オフ</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-label">通知</div>
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-row-icon">🔔</div>
+            <div class="settings-row-body">
+              <div class="settings-row-label">開封通知</div>
+              <div class="settings-row-sub" id="notif-perm-status"></div>
+            </div>
+            <label class="sw">
+              <input type="checkbox" id="notif-sw">
+              <span class="sw-track"><span class="sw-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-label">このアプリについて</div>
+        <div class="settings-group">
+          <div class="settings-row tappable" id="row-privacy">
+            <div class="settings-row-icon">📋</div>
+            <div class="settings-row-body">
+              <div class="settings-row-label">プライバシーポリシー</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-icon">ℹ️</div>
+            <div class="settings-row-body">
+              <div class="settings-row-label">バージョン</div>
+            </div>
+            <span class="settings-row-val">1.1.0</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Privacy policy screen ── -->
+  <div class="screen hidden" id="screen-privacy">
+    <div class="header">
+      <button class="btn-icon btn-back" id="btn-back-privacy" aria-label="戻る">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </button>
+      <div style="flex:1; text-align:center;">
+        <div class="header-title" style="font-size:1.1rem;">プライバシーポリシー</div>
+      </div>
+      <div style="width:40px;"></div>
+    </div>
+    <div class="privacy-body">
+      <p class="privacy-updated">最終更新: 2025年</p>
+
+      <h2>1. はじめに</h2>
+      <p>タイムカプセル（以下「本アプリ」）は、あなたのプライバシーを尊重します。本ポリシーは、本アプリが扱う情報について説明します。</p>
+
+      <h2>2. 収集・保存する情報</h2>
+      <p>本アプリが保存する情報は以下のみです。</p>
+      <ul>
+        <li>カプセルのタイトル・本文・作成日・開封日</li>
+        <li>アプリの設定（テーマ・文字サイズ・通知設定など）</li>
+      </ul>
+      <p>これらの情報はすべてお使いのデバイスのブラウザストレージ（localStorage）にのみ保存されます。</p>
+
+      <h2>3. 外部への送信</h2>
+      <p>本アプリはいかなる情報も外部のサーバーや第三者に送信・提供しません。インターネット接続なしでも動作します（初回ロード後）。</p>
+
+      <h2>4. データの管理と削除</h2>
+      <ul>
+        <li>設定画面の「バックアップを書き出す」でデータをJSONファイルとして保存できます</li>
+        <li>ブラウザのサイトデータ消去を行うと、すべてのカプセルが削除されます</li>
+        <li>定期的なバックアップを強くお勧めします</li>
+      </ul>
+
+      <h2>5. 通知</h2>
+      <p>通知を許可した場合、カプセルの開封日にデバイスの通知機能を使用します。通知の許可はいつでもデバイスのOS設定から変更できます。</p>
+
+      <h2>6. お問い合わせ</h2>
+      <p>ご不明な点は GitHub リポジトリ（github.com/tsubu-11/timecapsule）にてお問い合わせください。</p>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- ── Lock overlay ── -->
+<div id="lock-overlay" class="hidden">
+  <div class="lock-app-icon">✉️</div>
+  <div class="lock-app-name">タイムカプセル</div>
+  <div class="pin-dots" id="lock-dots">
+    <span class="pin-dot" id="lock-dot-0"></span>
+    <span class="pin-dot" id="lock-dot-1"></span>
+    <span class="pin-dot" id="lock-dot-2"></span>
+    <span class="pin-dot" id="lock-dot-3"></span>
+  </div>
+  <div class="lock-error-msg" id="lock-error"></div>
+  <div class="pin-pad" id="lock-pad"></div>
 </div>
 
-<!-- Seal animation overlay -->
+<!-- ── PIN setup modal ── -->
+<div id="pin-modal" class="hidden">
+  <div class="pin-modal-sheet">
+    <div class="pin-modal-title" id="pin-modal-title">PINを入力</div>
+    <div class="pin-modal-sub"   id="pin-modal-sub"></div>
+    <div class="pin-dots">
+      <span class="pin-dot" id="modal-dot-0"></span>
+      <span class="pin-dot" id="modal-dot-1"></span>
+      <span class="pin-dot" id="modal-dot-2"></span>
+      <span class="pin-dot" id="modal-dot-3"></span>
+    </div>
+    <div class="pin-pad" id="modal-pad"></div>
+    <button class="pin-modal-cancel" id="pin-modal-cancel">キャンセル</button>
+  </div>
+</div>
+
+<!-- ── Onboarding ── -->
+<div id="onboarding" class="hidden">
+  <div class="ob-slides">
+    <div class="ob-slide" id="ob-0">
+      <div class="ob-emoji">✉️</div>
+      <div class="ob-title">タイムカプセルへようこそ</div>
+      <div class="ob-desc">未来の自分へ、今の気持ちや夢を手紙として残しておこう</div>
+    </div>
+    <div class="ob-slide ob-right" id="ob-1">
+      <div class="ob-emoji">🔒</div>
+      <div class="ob-title">開封日まで読めない</div>
+      <div class="ob-desc">指定した日が来るまで、中身は厳重に封印されます。過去の自分からのサプライズを楽しもう</div>
+    </div>
+    <div class="ob-slide ob-right" id="ob-2">
+      <div class="ob-emoji">🔔</div>
+      <div class="ob-title">開封日に通知が届く</div>
+      <div class="ob-desc">カプセルが開封できるようになったらお知らせします。忘れていても大丈夫</div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <div class="ob-dots">
+      <span class="ob-dot active" id="ob-dot-0"></span>
+      <span class="ob-dot" id="ob-dot-1"></span>
+      <span class="ob-dot" id="ob-dot-2"></span>
+    </div>
+    <button class="ob-btn" id="ob-btn">次へ</button>
+  </div>
+</div>
+
+<!-- ── Seal animation overlay ── -->
 <div id="seal-overlay">
   <div class="seal-icon">🔒</div>
   <div class="seal-text">封をしました</div>
   <div class="seal-sub" id="seal-overlay-sub"></div>
 </div>
 
+<!-- ── Toast ── -->
+<div id="toast"></div>
+
+<!-- Hidden import file input -->
+<input type="file" id="import-file" accept=".json" style="display:none">
+
 <script>
-/* ── Storage ── */
-const STORAGE_KEY = 'timecapsule_v1';
+/* ══════════════════════════════════════════
+   Constants & Storage
+══════════════════════════════════════════ */
+const STORAGE_KEY        = 'timecapsule_v1';
+const THEME_KEY          = 'app_theme';
+const FONTSIZE_KEY       = 'app_fontsize';
+const PIN_KEY            = 'app_pin';
+const ONBOARDING_KEY     = 'onboarding_done';
+const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed';
+
 function load() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch { return []; }
@@ -560,39 +887,35 @@ function save(entries) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
-/* ── Helpers ── */
+/* ══════════════════════════════════════════
+   Helpers
+══════════════════════════════════════════ */
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
-
 function addMonths(date, n) {
   const d = new Date(date);
   d.setMonth(d.getMonth() + n);
   return d;
 }
-
 function fmtDate(iso) {
   const d = new Date(iso);
   return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
 }
-
 function daysUntil(iso) {
-  const now  = new Date(); now.setHours(0,0,0,0);
+  const now    = new Date(); now.setHours(0,0,0,0);
   const target = new Date(iso); target.setHours(0,0,0,0);
   return Math.ceil((target - now) / 86400000);
 }
-
 function isUnlocked(entry) {
   return new Date(entry.unlocksAt) <= new Date();
 }
-
 function isNewlyUnlocked(entry) {
   return isUnlocked(entry) && !entry.readAt;
 }
-
 function timeSince(iso) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const days  = Math.floor(diff / 86400000);
+  const diff   = Date.now() - new Date(iso).getTime();
+  const days   = Math.floor(diff / 86400000);
   const months = Math.floor(days / 30);
   const years  = Math.floor(days / 365);
   if (years  >= 1) return `${years}年前`;
@@ -600,56 +923,277 @@ function timeSince(iso) {
   if (days   >= 1) return `${days}日前`;
   return '今日';
 }
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
-/* ── State ── */
-let entries = load();
-let selectedMonths = 6;
-let useCustomDate  = false;
-let currentReadId  = null;
+/* ══════════════════════════════════════════
+   Theme & Font Size
+══════════════════════════════════════════ */
+function applyTheme(theme) {
+  localStorage.setItem(THEME_KEY, theme);
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.getElementById('theme-color-meta').content = isDark ? '#141210' : '#1c1917';
+}
+function applyFontSize(size) {
+  localStorage.setItem(FONTSIZE_KEY, size);
+  document.documentElement.style.fontSize = { small: '14px', medium: '16px', large: '18px' }[size] || '16px';
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if ((localStorage.getItem(THEME_KEY) || 'system') === 'system') applyTheme('system');
+});
 
-/* ── Elements ── */
-const screenList  = document.getElementById('screen-list');
-const screenWrite = document.getElementById('screen-write');
-const screenRead  = document.getElementById('screen-read');
-const sealOverlay = document.getElementById('seal-overlay');
+/* ══════════════════════════════════════════
+   Toast
+══════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ══════════════════════════════════════════
+   Screen management
+══════════════════════════════════════════ */
+const screenList     = document.getElementById('screen-list');
+const screenWrite    = document.getElementById('screen-write');
+const screenRead     = document.getElementById('screen-read');
+const screenSettings = document.getElementById('screen-settings');
+const screenPrivacy  = document.getElementById('screen-privacy');
+const sealOverlay    = document.getElementById('seal-overlay');
 
 function showScreen(name) {
-  [screenList, screenWrite, screenRead].forEach(s => {
+  [screenList, screenWrite, screenRead, screenSettings, screenPrivacy].forEach(s => {
     s.classList.add('hidden');
     s.classList.remove('slide-in');
   });
-  const target = { list: screenList, write: screenWrite, read: screenRead }[name];
+  const map = { list: screenList, write: screenWrite, read: screenRead, settings: screenSettings, privacy: screenPrivacy };
+  const target = map[name];
+  if (!target) return;
   target.classList.remove('hidden');
   requestAnimationFrame(() => target.classList.add('slide-in'));
 }
 
-/* ── Render list ── */
+/* ══════════════════════════════════════════
+   PIN Lock
+══════════════════════════════════════════ */
+let pinInput    = '';
+let pinCallback = null;
+
+function createPinPad(padId, context) {
+  const pad  = document.getElementById(padId);
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','del'];
+  pad.innerHTML = keys.map(k => {
+    if (k === '')    return '<button class="pin-key empty-key" tabindex="-1"></button>';
+    if (k === 'del') return '<button class="pin-key del-key" data-key="del">⌫</button>';
+    return `<button class="pin-key" data-key="${k}">${k}</button>`;
+  }).join('');
+  pad.addEventListener('click', e => {
+    const key = e.target.closest('[data-key]')?.dataset.key;
+    if (key !== undefined) handlePinKey(key, context);
+  });
+}
+
+function updatePinDots(context) {
+  const prefix = context === 'lock' ? 'lock-dot' : 'modal-dot';
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`${prefix}-${i}`)?.classList.toggle('filled', i < pinInput.length);
+  }
+}
+
+function handlePinKey(key, context) {
+  if (key === 'del') {
+    pinInput = pinInput.slice(0, -1);
+  } else if (pinInput.length < 4) {
+    pinInput += key;
+  }
+  updatePinDots(context);
+
+  if (pinInput.length === 4) {
+    if (context === 'lock') {
+      handleLockPin();
+    } else {
+      const cb  = pinCallback;
+      const pin = pinInput;
+      pinInput  = '';
+      setTimeout(() => { if (cb) cb(pin); }, 80);
+    }
+  }
+}
+
+function handleLockPin() {
+  const stored = localStorage.getItem(PIN_KEY);
+  if (pinInput === stored) {
+    document.getElementById('lock-overlay').classList.add('hidden');
+    document.getElementById('lock-error').textContent = '';
+    pinInput = '';
+    updatePinDots('lock');
+    showOnboarding();
+  } else {
+    const dotsEl = document.getElementById('lock-dots');
+    document.getElementById('lock-error').textContent = 'PINが違います';
+    for (let i = 0; i < 4; i++) {
+      const d = document.getElementById(`lock-dot-${i}`);
+      d.classList.remove('filled');
+      d.classList.add('error');
+    }
+    dotsEl.classList.add('shake');
+    setTimeout(() => {
+      dotsEl.classList.remove('shake');
+      for (let i = 0; i < 4; i++) document.getElementById(`lock-dot-${i}`).classList.remove('error');
+      pinInput = '';
+      updatePinDots('lock');
+    }, 500);
+  }
+}
+
+function checkLock() {
+  if (localStorage.getItem(PIN_KEY)) {
+    document.getElementById('lock-overlay').classList.remove('hidden');
+    pinInput = '';
+    updatePinDots('lock');
+    document.getElementById('lock-error').textContent = '';
+  }
+}
+
+function showPinModal(title, sub, callback) {
+  pinInput    = '';
+  pinCallback = callback;
+  document.getElementById('pin-modal-title').textContent = title;
+  document.getElementById('pin-modal-sub').textContent   = sub;
+  updatePinDots('modal');
+  document.getElementById('pin-modal').classList.remove('hidden');
+}
+function hidePinModal() {
+  document.getElementById('pin-modal').classList.add('hidden');
+  pinInput    = '';
+  pinCallback = null;
+}
+
+function setupPin() {
+  const current = localStorage.getItem(PIN_KEY);
+  if (current) {
+    showPinModal('現在のPINを入力', 'PINロックを解除します', pin => {
+      hidePinModal();
+      if (pin === current) {
+        localStorage.removeItem(PIN_KEY);
+        document.getElementById('pin-status-sub').textContent = 'オフ';
+        showToast('PINロックを解除しました');
+      } else {
+        setTimeout(() => showToast('PINが違います'), 100);
+      }
+    });
+  } else {
+    let newPin = '';
+    showPinModal('新しいPINを入力', '4桁の数字を設定します', pin => {
+      newPin = pin;
+      hidePinModal();
+      setTimeout(() => {
+        showPinModal('PINを確認', 'もう一度入力してください', pin2 => {
+          hidePinModal();
+          if (pin2 === newPin) {
+            localStorage.setItem(PIN_KEY, newPin);
+            document.getElementById('pin-status-sub').textContent = 'オン';
+            showToast('PINロックを設定しました');
+          } else {
+            showToast('PINが一致しません。もう一度お試しください');
+          }
+        });
+      }, 250);
+    });
+  }
+}
+
+document.getElementById('pin-modal-cancel').addEventListener('click', hidePinModal);
+
+/* ── Re-lock on visibility change ── */
+let appHiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    appHiddenAt = Date.now();
+  } else {
+    const hiddenMs = Date.now() - appHiddenAt;
+    if (localStorage.getItem(PIN_KEY) && hiddenMs > 60000) {
+      checkLock();
+    }
+    checkAndNotify();
+    renderList();
+  }
+});
+
+/* ══════════════════════════════════════════
+   Onboarding
+══════════════════════════════════════════ */
+let obSlide = 0;
+const OB_COUNT = 3;
+
+function showOnboarding() {
+  if (localStorage.getItem(ONBOARDING_KEY)) return;
+  obSlide = 0;
+  document.getElementById('onboarding').classList.remove('hidden');
+  renderObSlide();
+}
+function renderObSlide() {
+  for (let i = 0; i < OB_COUNT; i++) {
+    const s = document.getElementById(`ob-${i}`);
+    s.classList.remove('ob-left', 'ob-right');
+    if (i < obSlide) s.classList.add('ob-left');
+    else if (i > obSlide) s.classList.add('ob-right');
+    document.getElementById(`ob-dot-${i}`).classList.toggle('active', i === obSlide);
+  }
+  document.getElementById('ob-btn').textContent = obSlide === OB_COUNT - 1 ? 'はじめる' : '次へ';
+}
+document.getElementById('ob-btn').addEventListener('click', () => {
+  if (obSlide < OB_COUNT - 1) {
+    obSlide++;
+    renderObSlide();
+  } else {
+    localStorage.setItem(ONBOARDING_KEY, '1');
+    document.getElementById('onboarding').classList.add('hidden');
+    if (shouldShowBanner()) {
+      setTimeout(() => requestNotifPermission(), 600);
+    }
+  }
+});
+
+/* ══════════════════════════════════════════
+   State
+══════════════════════════════════════════ */
+let entries        = load();
+let selectedMonths = 6;
+let useCustomDate  = false;
+let currentReadId  = null;
+
+/* ══════════════════════════════════════════
+   Render list
+══════════════════════════════════════════ */
 function renderList() {
   entries = load();
-
   const total   = entries.length;
   const locked  = entries.filter(e => !isUnlocked(e)).length;
   const newOpen = entries.filter(e => isNewlyUnlocked(e)).length;
-  const accentStyle = newOpen > 0
-    ? 'border-color:var(--accent);background:linear-gradient(135deg,var(--accent-l),#fef2d0);box-shadow:0 2px 12px rgba(181,129,58,0.14);'
+  const accent  = newOpen > 0
+    ? 'border-color:var(--accent);background:linear-gradient(135deg,var(--accent-l),var(--accent-l2));box-shadow:0 2px 12px rgba(181,129,58,0.14);'
     : '';
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat-chip">
-      <div class="val">${total}</div>
-      <div class="lbl">カプセル</div>
+      <div class="val">${total}</div><div class="lbl">カプセル</div>
     </div>
     <div class="stat-chip">
-      <div class="val">${locked}</div>
-      <div class="lbl">封印中</div>
+      <div class="val">${locked}</div><div class="lbl">封印中</div>
     </div>
-    <div class="stat-chip" style="${accentStyle}">
+    <div class="stat-chip" style="${accent}">
       <div class="val" style="${newOpen > 0 ? 'color:var(--accent)' : ''}">${newOpen}</div>
       <div class="lbl" style="${newOpen > 0 ? 'color:var(--accent)' : ''}">開封待ち</div>
-    </div>
-  `;
+    </div>`;
 
   const list = document.getElementById('entry-list');
-  if (entries.length === 0) {
+  if (!entries.length) {
     list.innerHTML = `
       <div class="empty">
         <div class="empty-icon">✉️</div>
@@ -658,7 +1202,6 @@ function renderList() {
       </div>`;
     return;
   }
-
   const sorted = [...entries].sort((a, b) => {
     const an = isNewlyUnlocked(a), bn = isNewlyUnlocked(b);
     if (an !== bn) return an ? -1 : 1;
@@ -667,34 +1210,22 @@ function renderList() {
     if (al !== bl) return al ? -1 : 1;
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
-
   list.innerHTML = sorted.map(e => {
     const unlocked  = isUnlocked(e);
     const newlyOpen = isNewlyUnlocked(e);
     const days      = daysUntil(e.unlocksAt);
-
-    let cardClass = 'card';
-    let iconClass = 'card-icon';
-    let icon, badge;
-
+    let cardClass = 'card', iconClass = 'card-icon', icon, badge;
     if (newlyOpen) {
-      cardClass += ' unlocked-new';
-      iconClass += ' new-icon';
-      icon  = '📬';
+      cardClass += ' unlocked-new'; iconClass += ' new-icon'; icon = '📬';
       badge = `<span class="card-badge badge-new"><span class="badge-dot"></span>開封できます！</span>`;
     } else if (!unlocked) {
-      cardClass += ' locked';
-      iconClass += ' locked-icon';
-      icon  = '🔒';
+      cardClass += ' locked'; iconClass += ' locked-icon'; icon = '🔒';
       const label = days === 0 ? '今日開封' : days === 1 ? 'あと1日' : `あと${days}日`;
       badge = `<span class="card-badge badge-locked"><span class="badge-dot"></span>${label}</span>`;
     } else {
-      iconClass += ' read-icon';
-      icon  = '📖';
-      const ago = timeSince(e.unlocksAt);
-      badge = `<span class="card-badge badge-read"><span class="badge-dot"></span>${ago}に開封</span>`;
+      iconClass += ' read-icon'; icon = '📖';
+      badge = `<span class="card-badge badge-read"><span class="badge-dot"></span>${timeSince(e.unlocksAt)}に開封</span>`;
     }
-
     return `
       <div class="${cardClass}" data-id="${e.id}">
         <div class="card-top">
@@ -707,85 +1238,70 @@ function renderList() {
         ${badge}
       </div>`;
   }).join('');
-
   list.querySelectorAll('.card').forEach(card => {
     card.addEventListener('click', () => openEntry(card.dataset.id));
   });
 }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-/* ── Open entry ── */
+/* ══════════════════════════════════════════
+   Open & Read entry
+══════════════════════════════════════════ */
 function openEntry(id) {
   const entry = entries.find(e => e.id === id);
   if (!entry) return;
-
   if (!isUnlocked(entry)) {
     const days = daysUntil(entry.unlocksAt);
     alert(`このカプセルはあと${days}日後の\n${fmtDate(entry.unlocksAt)}に開封できます。`);
     return;
   }
-
   if (!entry.readAt) {
     entry.readAt = new Date().toISOString();
     save(entries);
   }
-
   currentReadId = id;
   renderRead(entry);
   showScreen('read');
 }
-
-/* ── Render read screen ── */
 function renderRead(entry) {
   const isNew = !entry.readAt || (new Date() - new Date(entry.readAt)) < 10000;
-
   document.getElementById('read-header-date').textContent = fmtDate(entry.createdAt);
-
   const banner = document.getElementById('read-new-banner');
   if (isNew) {
-    const waited = timeSince(entry.createdAt);
     banner.innerHTML = `
       <div class="new-open-banner">
         <span class="icon">🎉</span>
         <div class="txt">
           <strong>開封しました！</strong>
-          ${waited}の自分からのメッセージです
+          ${timeSince(entry.createdAt)}の自分からのメッセージです
         </div>
       </div>`;
   } else {
     banner.innerHTML = '';
   }
-
   document.getElementById('read-meta').innerHTML = `
     <span class="meta-chip">📝 <strong>${fmtDate(entry.createdAt)}</strong> に作成</span>
-    <span class="meta-chip">🔓 <strong>${fmtDate(entry.unlocksAt)}</strong> に開封</span>
-  `;
-
+    <span class="meta-chip">🔓 <strong>${fmtDate(entry.unlocksAt)}</strong> に開封</span>`;
   document.getElementById('read-title').textContent = entry.title || '無題のカプセル';
   document.getElementById('read-body').textContent  = entry.body;
 }
 
-/* ── Write screen ── */
+/* ══════════════════════════════════════════
+   Write screen
+══════════════════════════════════════════ */
 function initWrite() {
   document.getElementById('input-title').value = '';
   document.getElementById('input-body').value  = '';
   selectedMonths = 6;
   useCustomDate  = false;
   document.getElementById('custom-date-wrap').classList.remove('visible');
-
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   document.getElementById('input-date').min = tomorrow.toISOString().slice(0, 10);
-
   document.querySelectorAll('.preset-btn').forEach(btn => {
     btn.classList.remove('active');
     if (btn.dataset.months === '6') btn.classList.add('active');
   });
 }
-
 document.getElementById('preset-grid').addEventListener('click', e => {
   const btn = e.target.closest('.preset-btn');
   if (!btn) return;
@@ -801,73 +1317,51 @@ document.getElementById('preset-grid').addEventListener('click', e => {
   }
 });
 
-/* ── Seal sparkles ── */
+/* ══════════════════════════════════════════
+   Seal animation
+══════════════════════════════════════════ */
 function showSealOverlay() {
-  // Remove previous sparkles
   sealOverlay.querySelectorAll('.sparkle').forEach(s => s.remove());
-
   const emojis = ['✨', '⭐', '🌟', '💫', '✦', '🌠'];
-  const count = 10;
-  for (let i = 0; i < count; i++) {
-    const sp = document.createElement('div');
+  for (let i = 0; i < 10; i++) {
+    const sp    = document.createElement('div');
     sp.className = 'sparkle';
     sp.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-    const angle = (i / count) * 360 + Math.random() * 20;
+    const angle = (i / 10) * 360 + Math.random() * 20;
     const dist  = 90 + Math.random() * 70;
-    const dx    = Math.cos(angle * Math.PI / 180) * dist;
-    const dy    = Math.sin(angle * Math.PI / 180) * dist;
-    sp.style.setProperty('--dx', `${dx}px`);
-    sp.style.setProperty('--dy', `${dy}px`);
+    sp.style.setProperty('--dx', `${Math.cos(angle * Math.PI / 180) * dist}px`);
+    sp.style.setProperty('--dy', `${Math.sin(angle * Math.PI / 180) * dist}px`);
     sp.style.setProperty('--dr', `${(Math.random() - 0.5) * 200}deg`);
     sp.style.animationDelay = `${Math.random() * 0.25}s`;
     sealOverlay.appendChild(sp);
   }
-
   sealOverlay.classList.add('show');
 }
-
 document.getElementById('btn-seal').addEventListener('click', () => {
   const title = document.getElementById('input-title').value.trim();
   const body  = document.getElementById('input-body').value.trim();
-
-  if (!body) {
-    alert('メッセージを入力してください。');
-    return;
-  }
-
+  if (!body) { alert('メッセージを入力してください。'); return; }
   let unlocksAt;
   if (useCustomDate) {
     const val = document.getElementById('input-date').value;
     if (!val) { alert('開封日を選択してください。'); return; }
     unlocksAt = new Date(val + 'T00:00:00');
-    if (unlocksAt <= new Date()) { alert('開封日は明日以降の日付を選択してください。'); return; }
+    if (unlocksAt <= new Date()) { alert('開封日は明日以降を選択してください。'); return; }
   } else {
     unlocksAt = addMonths(new Date(), selectedMonths);
   }
   unlocksAt.setHours(0, 0, 0, 0);
-
-  const entry = {
-    id: uid(),
-    title: title || '',
-    body,
-    createdAt: new Date().toISOString(),
-    unlocksAt: unlocksAt.toISOString(),
-    readAt: null,
-  };
-
+  const entry = { id: uid(), title, body, createdAt: new Date().toISOString(), unlocksAt: unlocksAt.toISOString(), readAt: null };
   entries.push(entry);
   save(entries);
-
   document.getElementById('seal-overlay-sub').textContent = `${fmtDate(entry.unlocksAt)} に開封できます`;
   showSealOverlay();
-  setTimeout(() => {
-    sealOverlay.classList.remove('show');
-    showScreen('list');
-    renderList();
-  }, 1900);
+  setTimeout(() => { sealOverlay.classList.remove('show'); showScreen('list'); renderList(); }, 1900);
 });
 
-/* ── Delete ── */
+/* ══════════════════════════════════════════
+   Delete
+══════════════════════════════════════════ */
 document.getElementById('btn-delete').addEventListener('click', () => {
   if (!confirm('このカプセルを削除しますか？\nこの操作は取り消せません。')) return;
   entries = entries.filter(e => e.id !== currentReadId);
@@ -876,89 +1370,161 @@ document.getElementById('btn-delete').addEventListener('click', () => {
   renderList();
 });
 
-/* ── Navigation ── */
-document.getElementById('btn-new').addEventListener('click', () => {
-  initWrite();
-  showScreen('write');
-});
+/* ══════════════════════════════════════════
+   Navigation
+══════════════════════════════════════════ */
+document.getElementById('btn-new').addEventListener('click', () => { initWrite(); showScreen('write'); });
 document.getElementById('btn-back-write').addEventListener('click', () => {
   if (document.getElementById('input-body').value.trim()) {
     if (!confirm('作成をやめますか？\n入力した内容は消えます。')) return;
   }
   showScreen('list');
 });
-document.getElementById('btn-back-read').addEventListener('click', () => {
-  showScreen('list');
-  renderList();
+document.getElementById('btn-back-read').addEventListener('click', () => { showScreen('list'); renderList(); });
+document.getElementById('btn-back-settings').addEventListener('click', () => showScreen('list'));
+document.getElementById('btn-back-privacy').addEventListener('click', () => showScreen('settings'));
+document.getElementById('btn-settings-open').addEventListener('click', () => { updateSettingsUI(); showScreen('settings'); });
+
+/* ══════════════════════════════════════════
+   Settings
+══════════════════════════════════════════ */
+function updateSettingsUI() {
+  const theme = localStorage.getItem(THEME_KEY) || 'system';
+  document.querySelectorAll('#theme-seg .seg-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.theme === theme));
+
+  const size = localStorage.getItem(FONTSIZE_KEY) || 'medium';
+  document.querySelectorAll('#fontsize-seg .seg-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.size === size));
+
+  document.getElementById('pin-status-sub').textContent =
+    localStorage.getItem(PIN_KEY) ? 'オン' : 'オフ';
+
+  updateNotifUI();
+}
+
+document.getElementById('theme-seg').addEventListener('click', e => {
+  const btn = e.target.closest('.seg-btn');
+  if (!btn) return;
+  applyTheme(btn.dataset.theme);
+  document.querySelectorAll('#theme-seg .seg-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.theme === btn.dataset.theme));
+});
+document.getElementById('fontsize-seg').addEventListener('click', e => {
+  const btn = e.target.closest('.seg-btn');
+  if (!btn) return;
+  applyFontSize(btn.dataset.size);
+  document.querySelectorAll('#fontsize-seg .seg-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.size === btn.dataset.size));
+});
+document.getElementById('row-export').addEventListener('click', exportData);
+document.getElementById('row-import').addEventListener('click', () => document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', e => {
+  if (e.target.files[0]) { importData(e.target.files[0]); e.target.value = ''; }
+});
+document.getElementById('row-pin').addEventListener('click', setupPin);
+document.getElementById('row-privacy').addEventListener('click', () => showScreen('privacy'));
+document.getElementById('notif-sw').addEventListener('change', async e => {
+  if (!('Notification' in window)) { e.target.checked = false; return; }
+  if (Notification.permission === 'denied') {
+    showToast('OS設定から通知を許可してください');
+    e.target.checked = false;
+    return;
+  }
+  if (Notification.permission === 'default' && e.target.checked) {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') { checkAndNotify(); document.getElementById('notif-banner').classList.add('hidden'); }
+    updateNotifUI();
+  }
 });
 
-/* ── Notifications ── */
-const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed';
-
-function canNotify() {
-  return 'Notification' in window && Notification.permission === 'granted';
+/* ══════════════════════════════════════════
+   Export / Import
+══════════════════════════════════════════ */
+function exportData() {
+  const data = { version: 1, exported: new Date().toISOString(), entries: load() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `timecapsule-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('バックアップを書き出しました');
+}
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data     = JSON.parse(e.target.result);
+      const imported = Array.isArray(data) ? data : (data.entries || []);
+      if (!imported.length) { showToast('カプセルが見つかりませんでした'); return; }
+      const existing    = load();
+      const existingIds = new Set(existing.map(e => e.id));
+      const newEntries  = imported.filter(e => e.id && e.body && !existingIds.has(e.id));
+      const merged      = [...existing, ...newEntries];
+      save(merged);
+      entries = merged;
+      renderList();
+      showToast(`${newEntries.length}件のカプセルを読み込みました`);
+    } catch {
+      alert('ファイルの読み込みに失敗しました。\nタイムカプセルのバックアップファイルを選択してください。');
+    }
+  };
+  reader.readAsText(file);
 }
 
+/* ══════════════════════════════════════════
+   Notifications
+══════════════════════════════════════════ */
+function canNotify()        { return 'Notification' in window && Notification.permission === 'granted'; }
 function shouldShowBanner() {
   if (!('Notification' in window)) return false;
-  if (Notification.permission === 'granted') return false;
-  if (Notification.permission === 'denied') return false;
+  if (Notification.permission !== 'default') return false;
   return !localStorage.getItem(NOTIF_DISMISSED_KEY);
 }
-
+function updateNotifUI() {
+  const sw  = document.getElementById('notif-sw');
+  const sub = document.getElementById('notif-perm-status');
+  if (!('Notification' in window)) {
+    sw.disabled = true; sw.checked = false; sub.textContent = 'このブラウザでは非対応'; return;
+  }
+  if (Notification.permission === 'granted') {
+    sw.checked = true; sw.disabled = true; sub.textContent = '許可済み（変更はOS設定から）';
+  } else if (Notification.permission === 'denied') {
+    sw.checked = false; sw.disabled = true; sub.textContent = '拒否中（OS設定から変更できます）';
+  } else {
+    sw.checked = false; sw.disabled = false; sub.textContent = 'タップして許可する';
+  }
+}
 async function requestNotifPermission() {
   const perm = await Notification.requestPermission();
   document.getElementById('notif-banner').classList.add('hidden');
-  if (perm === 'granted') {
-    checkAndNotify();
-  }
+  if (perm === 'granted') checkAndNotify();
 }
-
 function checkAndNotify() {
   if (!canNotify()) return;
   const all = load();
-  const toNotify = all.filter(e => {
+  all.filter(e => {
     if (!isUnlocked(e)) return false;
-    const notifiedKey = `notified_${e.id}`;
-    if (localStorage.getItem(notifiedKey)) return false;
+    if (localStorage.getItem(`notified_${e.id}`)) return false;
     return true;
-  });
-
-  toNotify.forEach(e => {
-    const notifiedKey = `notified_${e.id}`;
-    localStorage.setItem(notifiedKey, '1');
-
-    const waited = timeSince(e.createdAt);
+  }).forEach(e => {
+    localStorage.setItem(`notified_${e.id}`, '1');
     const title = e.title || '無題のカプセル';
-    const reg = navigator.serviceWorker.controller
-      ? navigator.serviceWorker
-      : null;
-
-    if (reg && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then(r => {
-        r.showNotification('📬 タイムカプセルを開封できます', {
-          body: `「${title}」— ${waited}の自分からのメッセージ`,
-          icon: './icon-192.png',
-          badge: './icon-192.png',
-          tag: `capsule-${e.id}`,
-          data: { id: e.id },
-        });
-      });
+    const body  = `「${title}」— ${timeSince(e.createdAt)}の自分からのメッセージ`;
+    const opts  = { body, icon: './icon-192.png', badge: './icon-192.png', tag: `capsule-${e.id}`, data: { id: e.id } };
+    if (navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.ready.then(r => r.showNotification('📬 タイムカプセルを開封できます', opts));
     } else {
-      new Notification('📬 タイムカプセルを開封できます', {
-        body: `「${title}」— ${waited}の自分からのメッセージ`,
-        icon: './icon-192.png',
-        tag: `capsule-${e.id}`,
-      });
+      new Notification('📬 タイムカプセルを開封できます', opts);
     }
   });
 }
 
-// バナー表示
 if (shouldShowBanner()) {
   document.getElementById('notif-banner').classList.remove('hidden');
 }
-
 document.getElementById('notif-banner').addEventListener('click', e => {
   if (e.target.id === 'notif-close') {
     localStorage.setItem(NOTIF_DISMISSED_KEY, '1');
@@ -968,43 +1534,45 @@ document.getElementById('notif-banner').addEventListener('click', e => {
   requestNotifPermission();
 });
 
-// 画面が戻ったとき・フォーカス時にもチェック
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    checkAndNotify();
-    renderList();
-  }
-});
-
-// shortcuts の ?action=new 対応
-if (new URLSearchParams(location.search).get('action') === 'new') {
-  history.replaceState(null, '', location.pathname);
-  initWrite();
-  showScreen('write');
-}
-
-/* ── Init ── */
-renderList();
-checkAndNotify();
-
-/* ── PWA Service Worker ── */
+/* ══════════════════════════════════════════
+   PWA Service Worker
+══════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
-
-  // SW からのメッセージ（通知タップ時）でカプセルを開く
   navigator.serviceWorker.addEventListener('message', e => {
-    if (e.data?.type === 'open-capsule' && e.data.id) {
-      openEntry(e.data.id);
-    }
+    if (e.data?.type === 'open-capsule' && e.data.id) openEntry(e.data.id);
   });
 }
 
-// URL パラメータで直接開封（新規タブで開かれた場合）
-const openId = new URLSearchParams(location.search).get('open');
-if (openId) {
-  history.replaceState(null, '', location.pathname);
-  // entries のロード後に実行
-  setTimeout(() => openEntry(openId), 0);
+/* ══════════════════════════════════════════
+   URL params (shortcuts / notification tap)
+══════════════════════════════════════════ */
+const initParams = new URLSearchParams(location.search);
+const initAction = initParams.get('action');
+const initOpenId = initParams.get('open');
+if (initAction || initOpenId) history.replaceState(null, '', location.pathname);
+
+function handleUrlParams() {
+  if (initAction === 'new') { initWrite(); showScreen('write'); }
+  else if (initOpenId)      { setTimeout(() => openEntry(initOpenId), 0); }
+}
+
+/* ══════════════════════════════════════════
+   Init
+══════════════════════════════════════════ */
+applyTheme(localStorage.getItem(THEME_KEY) || 'system');
+applyFontSize(localStorage.getItem(FONTSIZE_KEY) || 'medium');
+createPinPad('lock-pad',  'lock');
+createPinPad('modal-pad', 'modal');
+
+renderList();
+checkAndNotify();
+handleUrlParams();
+
+if (localStorage.getItem(PIN_KEY)) {
+  checkLock();
+} else {
+  showOnboarding();
 }
 </script>
 </body>
