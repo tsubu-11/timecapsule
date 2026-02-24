@@ -1,4 +1,4 @@
-const CACHE = 'timecapsule-v2';
+const CACHE = 'timecapsule-v3';
 const ASSETS = ['./', './index.html', './icon.svg', './icon-180.png', './icon-192.png', './icon-512.png', './manifest.json'];
 
 self.addEventListener('install', e => {
