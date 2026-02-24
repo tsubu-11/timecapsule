@@ -435,11 +435,10 @@
 
     /* ── Lock overlay ── */
     #lock-overlay {
-      position: fixed; inset: 0; z-index: 200;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200;
       background: var(--bg);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 40px 20px 60px;
-      max-width: 430px; left: 50%; transform: translateX(-50%);
     }
     #lock-overlay.hidden { display: none; }
     .lock-app-icon { font-size: 3rem; margin-bottom: 10px; }
@@ -496,11 +495,10 @@
 
     /* ── Onboarding ── */
     #onboarding {
-      position: fixed; inset: 0; z-index: 150;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 150;
       background: var(--bg);
       display: flex; flex-direction: column; align-items: center;
       padding: 60px 28px 48px;
-      max-width: 430px; left: 50%; transform: translateX(-50%);
     }
     #onboarding.hidden { display: none; }
     .ob-slides { flex: 1; width: 100%; position: relative; overflow: hidden; }
