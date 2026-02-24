@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="タイムカプセル">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-180.png">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -417,6 +417,30 @@
     .new-open-banner .txt  { font-size: 0.82rem; line-height: 1.5; color: #7a5a1e; }
     .new-open-banner .txt strong { font-weight: 700; display: block; }
 
+    /* ── Notification banner ── */
+    #notif-banner {
+      margin: 0 20px 16px;
+      background: linear-gradient(135deg, #1c1917, #2d2218);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #notif-banner:active { opacity: 0.75; }
+    #notif-banner.hidden { display: none; }
+    #notif-banner .nb-icon { font-size: 1.5rem; flex-shrink: 0; }
+    #notif-banner .nb-text { flex: 1; }
+    #notif-banner .nb-text strong { display: block; font-size: 0.88rem; color: #fff; font-weight: 700; margin-bottom: 2px; }
+    #notif-banner .nb-text span  { font-size: 0.75rem; color: rgba(255,255,255,0.6); }
+    #notif-banner .nb-close {
+      font-size: 1rem; color: rgba(255,255,255,0.4);
+      background: none; border: none; cursor: pointer; padding: 4px;
+    }
+
     /* Delete btn */
     .btn-delete {
       margin: 16px 20px 0;
@@ -446,6 +470,14 @@
       <button class="btn-icon" id="btn-new" aria-label="新規作成">
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
       </button>
+    </div>
+    <div id="notif-banner" class="hidden">
+      <div class="nb-icon">🔔</div>
+      <div class="nb-text">
+        <strong>開封通知をオンにする</strong>
+        <span>カプセルが開封できるようになったらお知らせします</span>
+      </div>
+      <button class="nb-close" id="notif-close" aria-label="閉じる">✕</button>
     </div>
     <div class="stats" id="stats-bar"></div>
     <div class="entry-list" id="entry-list"></div>
@@ -860,12 +892,119 @@ document.getElementById('btn-back-read').addEventListener('click', () => {
   renderList();
 });
 
+/* ── Notifications ── */
+const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed';
+
+function canNotify() {
+  return 'Notification' in window && Notification.permission === 'granted';
+}
+
+function shouldShowBanner() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return false;
+  if (Notification.permission === 'denied') return false;
+  return !localStorage.getItem(NOTIF_DISMISSED_KEY);
+}
+
+async function requestNotifPermission() {
+  const perm = await Notification.requestPermission();
+  document.getElementById('notif-banner').classList.add('hidden');
+  if (perm === 'granted') {
+    checkAndNotify();
+  }
+}
+
+function checkAndNotify() {
+  if (!canNotify()) return;
+  const all = load();
+  const toNotify = all.filter(e => {
+    if (!isUnlocked(e)) return false;
+    const notifiedKey = `notified_${e.id}`;
+    if (localStorage.getItem(notifiedKey)) return false;
+    return true;
+  });
+
+  toNotify.forEach(e => {
+    const notifiedKey = `notified_${e.id}`;
+    localStorage.setItem(notifiedKey, '1');
+
+    const waited = timeSince(e.createdAt);
+    const title = e.title || '無題のカプセル';
+    const reg = navigator.serviceWorker.controller
+      ? navigator.serviceWorker
+      : null;
+
+    if (reg && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(r => {
+        r.showNotification('📬 タイムカプセルを開封できます', {
+          body: `「${title}」— ${waited}の自分からのメッセージ`,
+          icon: './icon-192.png',
+          badge: './icon-192.png',
+          tag: `capsule-${e.id}`,
+          data: { id: e.id },
+        });
+      });
+    } else {
+      new Notification('📬 タイムカプセルを開封できます', {
+        body: `「${title}」— ${waited}の自分からのメッセージ`,
+        icon: './icon-192.png',
+        tag: `capsule-${e.id}`,
+      });
+    }
+  });
+}
+
+// バナー表示
+if (shouldShowBanner()) {
+  document.getElementById('notif-banner').classList.remove('hidden');
+}
+
+document.getElementById('notif-banner').addEventListener('click', e => {
+  if (e.target.id === 'notif-close') {
+    localStorage.setItem(NOTIF_DISMISSED_KEY, '1');
+    document.getElementById('notif-banner').classList.add('hidden');
+    return;
+  }
+  requestNotifPermission();
+});
+
+// 画面が戻ったとき・フォーカス時にもチェック
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    checkAndNotify();
+    renderList();
+  }
+});
+
+// shortcuts の ?action=new 対応
+if (new URLSearchParams(location.search).get('action') === 'new') {
+  history.replaceState(null, '', location.pathname);
+  initWrite();
+  showScreen('write');
+}
+
 /* ── Init ── */
 renderList();
+checkAndNotify();
 
 /* ── PWA Service Worker ── */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
+
+  // SW からのメッセージ（通知タップ時）でカプセルを開く
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type === 'open-capsule' && e.data.id) {
+      openEntry(e.data.id);
+    }
+  });
+}
+
+// URL パラメータで直接開封（新規タブで開かれた場合）
+const openId = new URLSearchParams(location.search).get('open');
+if (openId) {
+  history.replaceState(null, '', location.pathname);
+  // entries のロード後に実行
+  setTimeout(() => openEntry(openId), 0);
 }
 </script>
 </body>
