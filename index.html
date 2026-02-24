@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>タイムカプセル</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1c1917">
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="タイムカプセル">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:       #f7f4ef;
+      --card:     #ffffff;
+      --accent:   #b5813a;
+      --accent-d: #9a6d2f;
+      --accent-l: #f5ead8;
+      --text:     #1c1917;
+      --muted:    #9c948c;
+      --border:   #e8e0d4;
+      --lock-bg:  #f8f6f2;
+      --red:      #c0392b;
+      --radius:   16px;
+      --shadow:   0 2px 16px rgba(181,129,58,0.07), 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    body {
+      background: var(--bg);
+      background-image: radial-gradient(ellipse 120% 40% at 50% 0%, rgba(213,174,107,0.15) 0%, transparent 65%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ── Screen transitions ── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      background-image: radial-gradient(ellipse 120% 40% at 50% 0%, rgba(213,174,107,0.15) 0%, transparent 65%);
+      overflow-y: auto;
+      transition: transform 0.28s cubic-bezier(.4,0,.2,1), opacity 0.28s;
+    }
+    .screen.hidden   { transform: translateX(100%); opacity: 0; pointer-events: none; }
+    .screen.slide-in { transform: translateX(0);    opacity: 1; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 56px 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(180deg, rgba(247,244,239,0.96) 0%, rgba(247,244,239,0.88) 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 20px; right: 20px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border) 30%, var(--border) 70%, transparent);
+    }
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #1c1917 30%, #8b5e24 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .btn-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(145deg, #2d2218, #1c1917);
+      border: none; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+      transition: opacity 0.15s, transform 0.15s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+    }
+    .btn-icon:active { opacity: 0.6; transform: scale(0.93); }
+    .btn-icon svg { width: 18px; height: 18px; fill: #fff; }
+    .btn-back {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .btn-back svg { fill: var(--text); }
+
+    /* ── Stats bar ── */
+    .stats {
+      display: flex;
+      gap: 10px;
+      padding: 20px 20px 20px;
+    }
+    .stat-chip {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 12px 14px;
+      flex: 1;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 6px rgba(181,129,58,0.05);
+      transition: all 0.2s;
+    }
+    .stat-chip .val { font-size: 1.4rem; font-weight: 700; }
+    .stat-chip .lbl { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+
+    /* ── Entry list ── */
+    .entry-list { padding: 0 20px 100px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* ── Card ── */
+    .card {
+      background: linear-gradient(180deg, #ffffff 0%, #fdfcfa 100%);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card:active { transform: scale(0.98); box-shadow: none; }
+    .card.locked { background: linear-gradient(180deg, #f8f6f2 0%, #f4f1eb 100%); }
+
+    .card.unlocked-new {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-l), 0 4px 24px rgba(181,129,58,0.22);
+      animation: pulse-gold 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse-gold {
+      0%, 100% { box-shadow: 0 0 0 2px var(--accent-l), 0 4px 20px rgba(181,129,58,0.15); }
+      50%       { box-shadow: 0 0 0 3px #f0d898, 0 6px 32px rgba(181,129,58,0.32); }
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .card-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.3rem;
+    }
+    .card-icon.locked-icon { background: linear-gradient(135deg, #ede9e3, #ddd7cd); }
+    .card-icon.new-icon    { background: linear-gradient(135deg, #f5ead8, #fae8be); }
+    .card-icon.read-icon   { background: linear-gradient(135deg, #edf4ed, #d8ead8); }
+
+    .card-body { flex: 1; min-width: 0; }
+    .card-title {
+      font-size: 1rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .card-date { font-size: 0.75rem; color: var(--muted); }
+
+    .card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 10px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .badge-locked { background: #ede9e3; color: #7c6e5c; }
+    .badge-new    { background: linear-gradient(135deg, var(--accent-l), #fae8be); color: var(--accent-d); }
+    .badge-read   { background: #edf4ed; color: #4a7c59; }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .badge-locked .badge-dot { background: #9c8c78; }
+    .badge-new    .badge-dot { background: var(--accent); }
+    .badge-read   .badge-dot { background: #4a7c59; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty h3   { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .empty p    { font-size: 0.85rem; line-height: 1.6; }
+
+    /* ── Write screen ── */
+    .write-body { padding: 0 20px 40px; }
+
+    .field-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .field-group { margin-bottom: 24px; }
+
+    input[type="text"], textarea {
+      width: 100%;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+    input[type="text"]:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(181,129,58,0.12);
+    }
+    textarea { min-height: 200px; resize: none; line-height: 1.6; }
+
+    /* Unlock date presets */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .preset-btn {
+      padding: 12px 6px;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text);
+      text-align: center;
+    }
+    .preset-btn.active {
+      background: linear-gradient(135deg, #d4a043, #b5813a);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(181,129,58,0.32);
+    }
+    .preset-btn:active { opacity: 0.7; }
+
+    input[type="date"] {
+      width: 100%;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      -webkit-appearance: none;
+      margin-top: 8px;
+    }
+    input[type="date"]:focus { border-color: var(--accent); }
+    .date-custom-wrap { display: none; }
+    .date-custom-wrap.visible { display: block; }
+
+    /* Seal button */
+    .btn-seal {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(150deg, #2d2218 0%, #1c1917 60%, #251c0e 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s;
+      margin-top: 8px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+    }
+    .btn-seal:active { opacity: 0.75; transform: scale(0.99); }
+    .btn-seal:disabled { opacity: 0.4; }
+
+    /* Seal animation overlay */
+    #seal-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, #fdf8f0 0%, var(--bg) 70%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s;
+      max-width: 430px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    #seal-overlay.show { opacity: 1; pointer-events: all; }
+    #seal-overlay .seal-icon {
+      font-size: 4.5rem;
+      margin-bottom: 20px;
+      animation: sealBounce 0.55s cubic-bezier(.34,1.56,.64,1);
+      position: relative;
+      z-index: 1;
+    }
+    #seal-overlay .seal-text {
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #1c1917 30%, #8b5e24 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      position: relative; z-index: 1;
+    }
+    #seal-overlay .seal-sub {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 8px;
+      position: relative; z-index: 1;
+    }
+    @keyframes sealBounce {
+      0%   { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+      70%  { transform: scale(1.18) rotate(6deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    /* Sparkles */
+    .sparkle {
+      position: absolute;
+      pointer-events: none;
+      font-size: 1.4rem;
+      animation: sparkleFly 1.1s ease-out forwards;
+      z-index: 0;
+    }
+    @keyframes sparkleFly {
+      0%   { transform: translate(0, 0) scale(0.2) rotate(0deg); opacity: 1; }
+      60%  { opacity: 0.9; }
+      100% { transform: translate(var(--dx), var(--dy)) scale(0.8) rotate(var(--dr)); opacity: 0; }
+    }
+
+    /* ── Read screen ── */
+    .read-meta {
+      padding: 0 20px 24px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .meta-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .meta-chip strong { color: var(--text); }
+
+    .read-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      padding: 0 20px 20px;
+      line-height: 1.3;
+    }
+    .read-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+      margin: 0 20px 24px;
+    }
+    .read-body {
+      padding: 0 20px 80px;
+      font-size: 1rem;
+      line-height: 1.8;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* New-open banner */
+    .new-open-banner {
+      margin: 0 20px 20px;
+      background: linear-gradient(135deg, var(--accent-l), #fef2d0);
+      border: 1px solid #d4a043;
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 2px 14px rgba(181,129,58,0.16);
+    }
+    .new-open-banner .icon { font-size: 1.4rem; }
+    .new-open-banner .txt  { font-size: 0.82rem; line-height: 1.5; color: #7a5a1e; }
+    .new-open-banner .txt strong { font-weight: 700; display: block; }
+
+    /* Delete btn */
+    .btn-delete {
+      margin: 16px 20px 0;
+      width: calc(100% - 40px);
+      padding: 14px;
+      background: none;
+      border: 1.5px solid #e8c0bb;
+      border-radius: 12px;
+      color: var(--red);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-delete:active { background: #fdf0ee; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── List screen ── -->
+  <div class="screen slide-in" id="screen-list">
+    <div class="header">
+      <div>
+        <div class="header-title">タイムカプセル</div>
+        <div class="header-sub">過去の自分からの手紙</div>
+      </div>
+      <button class="btn-icon" id="btn-new" aria-label="新規作成">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      </button>
+    </div>
+    <div class="stats" id="stats-bar"></div>
+    <div class="entry-list" id="entry-list"></div>
+  </div>
+
+  <!-- ── Write screen ── -->
+  <div class="screen hidden" id="screen-write">
+    <div class="header">
+      <button class="btn-icon btn-back" id="btn-back-write" aria-label="戻る">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </button>
+      <div style="flex:1; text-align:center;">
+        <div class="header-title" style="font-size:1.1rem;">新しいカプセル</div>
+      </div>
+      <div style="width:40px;"></div>
+    </div>
+    <div class="write-body">
+      <div class="field-group">
+        <div class="field-label">タイトル</div>
+        <input type="text" id="input-title" placeholder="このカプセルの名前…" maxlength="60">
+      </div>
+      <div class="field-group">
+        <div class="field-label">未来の自分へ</div>
+        <textarea id="input-body" placeholder="今の気持ち、悩み、夢、どんなことでも…"></textarea>
+      </div>
+      <div class="field-group">
+        <div class="field-label">開封日</div>
+        <div class="preset-grid" id="preset-grid">
+          <button class="preset-btn" data-months="1">1ヶ月後</button>
+          <button class="preset-btn" data-months="3">3ヶ月後</button>
+          <button class="preset-btn active" data-months="6">6ヶ月後</button>
+          <button class="preset-btn" data-months="12">1年後</button>
+          <button class="preset-btn" data-months="36">3年後</button>
+          <button class="preset-btn" data-custom="true">指定日</button>
+        </div>
+        <div class="date-custom-wrap" id="custom-date-wrap">
+          <input type="date" id="input-date">
+        </div>
+      </div>
+      <button class="btn-seal" id="btn-seal">🔒　封をする</button>
+    </div>
+  </div>
+
+  <!-- ── Read screen ── -->
+  <div class="screen hidden" id="screen-read">
+    <div class="header">
+      <button class="btn-icon btn-back" id="btn-back-read" aria-label="戻る">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </button>
+      <div style="flex:1; text-align:center;">
+        <div class="header-title" style="font-size:1rem;" id="read-header-date"></div>
+      </div>
+      <div style="width:40px;"></div>
+    </div>
+    <div id="read-new-banner"></div>
+    <div class="read-meta" id="read-meta"></div>
+    <div class="read-title" id="read-title"></div>
+    <div class="read-divider"></div>
+    <div class="read-body" id="read-body"></div>
+    <button class="btn-delete" id="btn-delete">このカプセルを削除</button>
+  </div>
+
+</div>
+
+<!-- Seal animation overlay -->
+<div id="seal-overlay">
+  <div class="seal-icon">🔒</div>
+  <div class="seal-text">封をしました</div>
+  <div class="seal-sub" id="seal-overlay-sub"></div>
+</div>
+
+<script>
+/* ── Storage ── */
+const STORAGE_KEY = 'timecapsule_v1';
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function save(entries) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+/* ── Helpers ── */
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function addMonths(date, n) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+function daysUntil(iso) {
+  const now  = new Date(); now.setHours(0,0,0,0);
+  const target = new Date(iso); target.setHours(0,0,0,0);
+  return Math.ceil((target - now) / 86400000);
+}
+
+function isUnlocked(entry) {
+  return new Date(entry.unlocksAt) <= new Date();
+}
+
+function isNewlyUnlocked(entry) {
+  return isUnlocked(entry) && !entry.readAt;
+}
+
+function timeSince(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const days  = Math.floor(diff / 86400000);
+  const months = Math.floor(days / 30);
+  const years  = Math.floor(days / 365);
+  if (years  >= 1) return `${years}年前`;
+  if (months >= 1) return `${months}ヶ月前`;
+  if (days   >= 1) return `${days}日前`;
+  return '今日';
+}
+
+/* ── State ── */
+let entries = load();
+let selectedMonths = 6;
+let useCustomDate  = false;
+let currentReadId  = null;
+
+/* ── Elements ── */
+const screenList  = document.getElementById('screen-list');
+const screenWrite = document.getElementById('screen-write');
+const screenRead  = document.getElementById('screen-read');
+const sealOverlay = document.getElementById('seal-overlay');
+
+function showScreen(name) {
+  [screenList, screenWrite, screenRead].forEach(s => {
+    s.classList.add('hidden');
+    s.classList.remove('slide-in');
+  });
+  const target = { list: screenList, write: screenWrite, read: screenRead }[name];
+  target.classList.remove('hidden');
+  requestAnimationFrame(() => target.classList.add('slide-in'));
+}
+
+/* ── Render list ── */
+function renderList() {
+  entries = load();
+
+  const total   = entries.length;
+  const locked  = entries.filter(e => !isUnlocked(e)).length;
+  const newOpen = entries.filter(e => isNewlyUnlocked(e)).length;
+  const accentStyle = newOpen > 0
+    ? 'border-color:var(--accent);background:linear-gradient(135deg,var(--accent-l),#fef2d0);box-shadow:0 2px 12px rgba(181,129,58,0.14);'
+    : '';
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-chip">
+      <div class="val">${total}</div>
+      <div class="lbl">カプセル</div>
+    </div>
+    <div class="stat-chip">
+      <div class="val">${locked}</div>
+      <div class="lbl">封印中</div>
+    </div>
+    <div class="stat-chip" style="${accentStyle}">
+      <div class="val" style="${newOpen > 0 ? 'color:var(--accent)' : ''}">${newOpen}</div>
+      <div class="lbl" style="${newOpen > 0 ? 'color:var(--accent)' : ''}">開封待ち</div>
+    </div>
+  `;
+
+  const list = document.getElementById('entry-list');
+  if (entries.length === 0) {
+    list.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">✉️</div>
+        <h3>まだカプセルがありません</h3>
+        <p>右上の＋ボタンから<br>未来の自分への手紙を書いてみよう</p>
+      </div>`;
+    return;
+  }
+
+  const sorted = [...entries].sort((a, b) => {
+    const an = isNewlyUnlocked(a), bn = isNewlyUnlocked(b);
+    if (an !== bn) return an ? -1 : 1;
+    const al = !isUnlocked(a), bl = !isUnlocked(b);
+    if (al && bl) return new Date(a.unlocksAt) - new Date(b.unlocksAt);
+    if (al !== bl) return al ? -1 : 1;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  list.innerHTML = sorted.map(e => {
+    const unlocked  = isUnlocked(e);
+    const newlyOpen = isNewlyUnlocked(e);
+    const days      = daysUntil(e.unlocksAt);
+
+    let cardClass = 'card';
+    let iconClass = 'card-icon';
+    let icon, badge;
+
+    if (newlyOpen) {
+      cardClass += ' unlocked-new';
+      iconClass += ' new-icon';
+      icon  = '📬';
+      badge = `<span class="card-badge badge-new"><span class="badge-dot"></span>開封できます！</span>`;
+    } else if (!unlocked) {
+      cardClass += ' locked';
+      iconClass += ' locked-icon';
+      icon  = '🔒';
+      const label = days === 0 ? '今日開封' : days === 1 ? 'あと1日' : `あと${days}日`;
+      badge = `<span class="card-badge badge-locked"><span class="badge-dot"></span>${label}</span>`;
+    } else {
+      iconClass += ' read-icon';
+      icon  = '📖';
+      const ago = timeSince(e.unlocksAt);
+      badge = `<span class="card-badge badge-read"><span class="badge-dot"></span>${ago}に開封</span>`;
+    }
+
+    return `
+      <div class="${cardClass}" data-id="${e.id}">
+        <div class="card-top">
+          <div class="${iconClass}">${icon}</div>
+          <div class="card-body">
+            <div class="card-title">${escHtml(e.title || '無題のカプセル')}</div>
+            <div class="card-date">${fmtDate(e.createdAt)} に封をした</div>
+          </div>
+        </div>
+        ${badge}
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => openEntry(card.dataset.id));
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Open entry ── */
+function openEntry(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+
+  if (!isUnlocked(entry)) {
+    const days = daysUntil(entry.unlocksAt);
+    alert(`このカプセルはあと${days}日後の\n${fmtDate(entry.unlocksAt)}に開封できます。`);
+    return;
+  }
+
+  if (!entry.readAt) {
+    entry.readAt = new Date().toISOString();
+    save(entries);
+  }
+
+  currentReadId = id;
+  renderRead(entry);
+  showScreen('read');
+}
+
+/* ── Render read screen ── */
+function renderRead(entry) {
+  const isNew = !entry.readAt || (new Date() - new Date(entry.readAt)) < 10000;
+
+  document.getElementById('read-header-date').textContent = fmtDate(entry.createdAt);
+
+  const banner = document.getElementById('read-new-banner');
+  if (isNew) {
+    const waited = timeSince(entry.createdAt);
+    banner.innerHTML = `
+      <div class="new-open-banner">
+        <span class="icon">🎉</span>
+        <div class="txt">
+          <strong>開封しました！</strong>
+          ${waited}の自分からのメッセージです
+        </div>
+      </div>`;
+  } else {
+    banner.innerHTML = '';
+  }
+
+  document.getElementById('read-meta').innerHTML = `
+    <span class="meta-chip">📝 <strong>${fmtDate(entry.createdAt)}</strong> に作成</span>
+    <span class="meta-chip">🔓 <strong>${fmtDate(entry.unlocksAt)}</strong> に開封</span>
+  `;
+
+  document.getElementById('read-title').textContent = entry.title || '無題のカプセル';
+  document.getElementById('read-body').textContent  = entry.body;
+}
+
+/* ── Write screen ── */
+function initWrite() {
+  document.getElementById('input-title').value = '';
+  document.getElementById('input-body').value  = '';
+  selectedMonths = 6;
+  useCustomDate  = false;
+  document.getElementById('custom-date-wrap').classList.remove('visible');
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('input-date').min = tomorrow.toISOString().slice(0, 10);
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.months === '6') btn.classList.add('active');
+  });
+}
+
+document.getElementById('preset-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.preset-btn');
+  if (!btn) return;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (btn.dataset.custom) {
+    useCustomDate = true;
+    document.getElementById('custom-date-wrap').classList.add('visible');
+  } else {
+    useCustomDate  = false;
+    selectedMonths = parseInt(btn.dataset.months);
+    document.getElementById('custom-date-wrap').classList.remove('visible');
+  }
+});
+
+/* ── Seal sparkles ── */
+function showSealOverlay() {
+  // Remove previous sparkles
+  sealOverlay.querySelectorAll('.sparkle').forEach(s => s.remove());
+
+  const emojis = ['✨', '⭐', '🌟', '💫', '✦', '🌠'];
+  const count = 10;
+  for (let i = 0; i < count; i++) {
+    const sp = document.createElement('div');
+    sp.className = 'sparkle';
+    sp.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    const angle = (i / count) * 360 + Math.random() * 20;
+    const dist  = 90 + Math.random() * 70;
+    const dx    = Math.cos(angle * Math.PI / 180) * dist;
+    const dy    = Math.sin(angle * Math.PI / 180) * dist;
+    sp.style.setProperty('--dx', `${dx}px`);
+    sp.style.setProperty('--dy', `${dy}px`);
+    sp.style.setProperty('--dr', `${(Math.random() - 0.5) * 200}deg`);
+    sp.style.animationDelay = `${Math.random() * 0.25}s`;
+    sealOverlay.appendChild(sp);
+  }
+
+  sealOverlay.classList.add('show');
+}
+
+document.getElementById('btn-seal').addEventListener('click', () => {
+  const title = document.getElementById('input-title').value.trim();
+  const body  = document.getElementById('input-body').value.trim();
+
+  if (!body) {
+    alert('メッセージを入力してください。');
+    return;
+  }
+
+  let unlocksAt;
+  if (useCustomDate) {
+    const val = document.getElementById('input-date').value;
+    if (!val) { alert('開封日を選択してください。'); return; }
+    unlocksAt = new Date(val + 'T00:00:00');
+    if (unlocksAt <= new Date()) { alert('開封日は明日以降の日付を選択してください。'); return; }
+  } else {
+    unlocksAt = addMonths(new Date(), selectedMonths);
+  }
+  unlocksAt.setHours(0, 0, 0, 0);
+
+  const entry = {
+    id: uid(),
+    title: title || '',
+    body,
+    createdAt: new Date().toISOString(),
+    unlocksAt: unlocksAt.toISOString(),
+    readAt: null,
+  };
+
+  entries.push(entry);
+  save(entries);
+
+  document.getElementById('seal-overlay-sub').textContent = `${fmtDate(entry.unlocksAt)} に開封できます`;
+  showSealOverlay();
+  setTimeout(() => {
+    sealOverlay.classList.remove('show');
+    showScreen('list');
+    renderList();
+  }, 1900);
+});
+
+/* ── Delete ── */
+document.getElementById('btn-delete').addEventListener('click', () => {
+  if (!confirm('このカプセルを削除しますか？\nこの操作は取り消せません。')) return;
+  entries = entries.filter(e => e.id !== currentReadId);
+  save(entries);
+  showScreen('list');
+  renderList();
+});
+
+/* ── Navigation ── */
+document.getElementById('btn-new').addEventListener('click', () => {
+  initWrite();
+  showScreen('write');
+});
+document.getElementById('btn-back-write').addEventListener('click', () => {
+  if (document.getElementById('input-body').value.trim()) {
+    if (!confirm('作成をやめますか？\n入力した内容は消えます。')) return;
+  }
+  showScreen('list');
+});
+document.getElementById('btn-back-read').addEventListener('click', () => {
+  showScreen('list');
+  renderList();
+});
+
+/* ── Init ── */
+renderList();
+
+/* ── PWA Service Worker ── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
